@@ -1,19 +1,17 @@
 # Time Management
 
-One Next.js app — UI + API together.
+Next.js app — UI + API together. Vercel deploys from the repo root.
 
 ```
-frontend/
-  src/app/          pages
-  src/app/api/      backend (auth, projects, timers)
-  src/lib/server/   Firebase, JWT, time helpers
-  .env.example
+src/app/          pages
+src/app/api/      backend (auth, projects, timers)
+src/lib/server/   Firebase, JWT, time helpers
+.env.example
 ```
 
 ## Run
 
 ```bash
-cd frontend
 cp .env.example .env.local
 npm install
 npm run dev
@@ -21,20 +19,29 @@ npm run dev
 
 Open http://localhost:3000
 
-## Env (`frontend/.env.local`)
+## Vercel
+
+1. Import this GitHub repo
+2. **Root Directory:** leave empty (`.`)
+3. Framework: Next.js (auto)
+4. Add environment variables from `.env.example`
+5. Deploy
+
+Do not set Root Directory to `frontend`.
+
+## Env
 
 ```
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 NEXT_PUBLIC_API_URL=/api
 JWT_SECRET=change_this_to_a_long_random_secret_key
 FIREBASE_DATABASE_URL=https://tracking-4e060-default-rtdb.firebaseio.com
 FIREBASE_PROJECT_ID=tracking-4e060
-FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
 ```
 
-Put Firebase key at `frontend/serviceAccountKey.json` (do not commit).
-
-If Firebase is not set, a local JSON file is used: `frontend/data/local-db.json`.
+On Vercel, paste `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` from your service account JSON. Do not use `FIREBASE_SERVICE_ACCOUNT_PATH` on Vercel.
 
 ## AWS
 
