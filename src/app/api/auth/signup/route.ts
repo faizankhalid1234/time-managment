@@ -6,6 +6,7 @@ import { toPkParts } from "@/lib/server/time";
 import { emailKey, findUserByEmail } from "@/lib/server/helpers";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
@@ -57,9 +58,14 @@ export async function POST(req: NextRequest) {
     );
   } catch (err) {
     console.error("Signup error:", err);
+    const message = err instanceof Error ? err.message : "Could not create account";
+    const isConfig = /firebase/i.test(message);
     return NextResponse.json(
-      { error: "Could not create account" },
-      { status: 500 }
+      {
+        error: isConfig ? message : "Could not create account",
+        code: isConfig ? "FIREBASE_CONFIG" : "ERROR",
+      },
+      { status: isConfig ? 503 : 500 }
     );
   }
 }

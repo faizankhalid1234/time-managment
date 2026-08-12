@@ -5,6 +5,7 @@ import { signToken } from "@/lib/server/auth";
 import { emailKey, findUserByEmail } from "@/lib/server/helpers";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
@@ -51,6 +52,14 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("Login error:", err);
-    return NextResponse.json({ error: "Could not log in" }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Could not log in";
+    const isConfig = /firebase/i.test(message);
+    return NextResponse.json(
+      {
+        error: isConfig ? message : "Could not log in",
+        code: isConfig ? "FIREBASE_CONFIG" : "ERROR",
+      },
+      { status: isConfig ? 503 : 500 }
+    );
   }
 }

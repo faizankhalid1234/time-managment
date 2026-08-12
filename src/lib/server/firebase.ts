@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 
 const localDbPath = path.join(process.cwd(), "data/local-db.json");
+const requireFirebase = process.env.VERCEL === "1";
 
 let db: Database | null = null;
 let useLocal = false;
@@ -14,6 +15,7 @@ let localData: Record<string, unknown> = {
   emails: {},
 };
 let initialized = false;
+let initError: string | null = null;
 
 function ensureLocalFile() {
   const dir = path.dirname(localDbPath);
@@ -29,6 +31,24 @@ function saveLocal() {
   fs.writeFileSync(localDbPath, JSON.stringify(localData, null, 2));
 }
 
+function stripQuotes(value: string) {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function normalizePrivateKey(raw: string) {
+  return stripQuotes(raw)
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .trim();
+}
+
 function resolveServiceAccountPath() {
   const fromEnv = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
   const candidates = [
@@ -41,69 +61,129 @@ function resolveServiceAccountPath() {
 }
 
 function loadCredentials() {
+  const jsonRaw = (process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "").trim();
+  if (jsonRaw && jsonRaw.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(jsonRaw) as {
+        project_id?: string;
+        client_email?: string;
+        private_key?: string;
+      };
+      if (parsed.client_email && parsed.private_key) {
+        return {
+          projectId: parsed.project_id || process.env.FIREBASE_PROJECT_ID,
+          clientEmail: parsed.client_email,
+          privateKey: normalizePrivateKey(parsed.private_key),
+          source: "FIREBASE_SERVICE_ACCOUNT_JSON",
+        };
+      }
+    } catch {
+      throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON");
+    }
+  }
+
   const filePath = resolveServiceAccountPath();
   if (filePath) {
-    const raw = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const raw = JSON.parse(fs.readFileSync(filePath, "utf8")) as {
+      project_id?: string;
+      client_email?: string;
+      private_key?: string;
+    };
     return {
       projectId: raw.project_id || process.env.FIREBASE_PROJECT_ID,
       clientEmail: raw.client_email,
-      privateKey: raw.private_key,
+      privateKey: normalizePrivateKey(raw.private_key || ""),
       source: filePath,
     };
   }
 
-  const email = (process.env.FIREBASE_CLIENT_EMAIL || "").trim();
-  const key = (process.env.FIREBASE_PRIVATE_KEY || "").trim();
+  const email = stripQuotes(process.env.FIREBASE_CLIENT_EMAIL || "");
+  const key = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY || "");
   if (
     email &&
     key &&
     !email.includes("xxxxx") &&
-    !key.includes("YOUR_PRIVATE_KEY")
+    !key.includes("YOUR_PRIVATE_KEY") &&
+    !key.includes("PASTE_FROM_FIREBASE")
   ) {
     return {
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: email,
-      privateKey: key.replace(/\\n/g, "\n"),
-      source: ".env",
+      privateKey: key,
+      source: "env",
     };
   }
 
   return null;
 }
 
+export function getFirebaseStatus() {
+  try {
+    initFirebase();
+  } catch (err) {
+    return {
+      ok: false,
+      mode: "error" as const,
+      error: err instanceof Error ? err.message : "Firebase failed",
+    };
+  }
+  if (initError) return { ok: false, mode: "error" as const, error: initError };
+  if (useLocal) return { ok: true, mode: "local" as const };
+  return { ok: true, mode: "firebase" as const };
+}
+
 export function initFirebase() {
-  if (initialized) return;
-  initialized = true;
+  if (initialized) {
+    if (initError) throw new Error(initError);
+    return;
+  }
 
   const databaseURL = (
     process.env.FIREBASE_DATABASE_URL ||
     "https://tracking-4e060-default-rtdb.firebaseio.com"
   ).replace(/\/$/, "");
 
-  const creds = loadCredentials();
+  try {
+    const creds = loadCredentials();
 
-  if (!creds) {
-    useLocal = true;
-    ensureLocalFile();
-    console.log(
-      "⚠ Firebase service account missing — using local JSON database"
-    );
-    return;
+    if (!creds) {
+      if (requireFirebase) {
+        initError =
+          "Firebase is not configured. Add FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY in Vercel environment variables.";
+        initialized = true;
+        throw new Error(initError);
+      }
+      useLocal = true;
+      ensureLocalFile();
+      initialized = true;
+      console.log(
+        "⚠ Firebase service account missing — using local JSON database"
+      );
+      return;
+    }
+
+    if (!getApps().length) {
+      initializeApp({
+        credential: cert({
+          projectId: creds.projectId || "tracking-4e060",
+          clientEmail: creds.clientEmail,
+          privateKey: creds.privateKey,
+        }),
+        databaseURL,
+      });
+    }
+
+    db = getDatabase();
+    initialized = true;
+    console.log("✓ Firebase Realtime Database connected:", databaseURL);
+  } catch (err) {
+    initError =
+      err instanceof Error
+        ? err.message
+        : "Firebase failed to initialize";
+    initialized = true;
+    throw new Error(initError);
   }
-
-  if (!getApps().length) {
-    initializeApp({
-      credential: cert({
-        projectId: creds.projectId || "tracking-4e060",
-        clientEmail: creds.clientEmail,
-        privateKey: creds.privateKey,
-      }),
-      databaseURL,
-    });
-  }
-
-  db = getDatabase();
-  console.log("✓ Firebase Realtime Database connected:", databaseURL);
 }
 
 function walk(obj: Record<string, unknown>, parts: string[]) {

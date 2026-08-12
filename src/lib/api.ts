@@ -1,4 +1,10 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+function resolveApiUrl() {
+  const raw = (process.env.NEXT_PUBLIC_API_URL || "/api").trim().replace(/\/$/, "");
+  if (!raw || /localhost|127\.0\.0\.1/i.test(raw)) return "/api";
+  return raw;
+}
+
+const API_URL = resolveApiUrl();
 
 export type User = { id: string; name: string; email: string };
 
@@ -95,8 +101,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
-  const data = await res.json().catch(() => ({}));
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  } catch {
+    throw new ApiError("Could not reach the server. Please try again.", "NETWORK", 0);
+  }
+
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    code?: string;
+  };
 
   if (!res.ok) {
     throw new ApiError(

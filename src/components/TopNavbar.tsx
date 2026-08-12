@@ -9,9 +9,10 @@ import { BrandLogo } from "@/components/BrandLogo";
 
 type Props = {
   right?: ReactNode;
+  showClock?: boolean;
 };
 
-export function TopNavbar({ right }: Props) {
+export function TopNavbar({ right, showClock = true }: Props) {
   return (
     <motion.header
       initial={{ y: -12, opacity: 0 }}
@@ -25,9 +26,13 @@ export function TopNavbar({ right }: Props) {
           <span className="nav-word">Time Management</span>
         </Link>
 
-        <div className="nav-center">
-          <PakistanClock />
-        </div>
+        {showClock ? (
+          <div className="nav-center">
+            <PakistanClock />
+          </div>
+        ) : (
+          <div className="nav-center" />
+        )}
 
         <div className="nav-actions">
           <ThemeToggle />

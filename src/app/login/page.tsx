@@ -47,6 +47,7 @@ export default function LoginPage() {
 
       <div className="relative mx-auto w-full max-w-6xl">
         <TopNavbar
+          showClock={false}
           right={
             <Link
               href="/signup"
