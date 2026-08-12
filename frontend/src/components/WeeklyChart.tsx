@@ -35,7 +35,9 @@ export function WeeklyChart({ stats, loading }: Props) {
   const tick = isDark ? "#b6c4d6" : "#4a5d73";
   const grid = isDark ? "#8fa0b5" : "#94a3b8";
   const tooltipBg = isDark ? "#152033" : "#ffffff";
-  const tooltipBorder = isDark ? "rgba(238,244,251,0.12)" : "rgba(15,23,42,0.08)";
+  const tooltipBorder = isDark
+    ? "rgba(238,244,251,0.12)"
+    : "rgba(15,23,42,0.08)";
   const tooltipColor = isDark ? "#eef4fb" : "#0f1c2e";
 
   if (loading) {
@@ -49,7 +51,9 @@ export function WeeklyChart({ stats, loading }: Props) {
   if (!stats || stats.series.length === 0) {
     return (
       <div className="flex h-72 flex-col items-center justify-center gap-2 text-center">
-        <p className="font-display text-lg text-muted">No tracked time this week</p>
+        <p className="font-display text-lg text-muted">
+          No tracked time this week
+        </p>
         <p className="text-faint max-w-sm text-sm">
           Start a project timer to see hours stack up across the week.
         </p>
@@ -71,8 +75,15 @@ export function WeeklyChart({ stats, loading }: Props) {
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={grid} strokeOpacity={0.25} />
+        <BarChart
+          data={data}
+          margin={{ top: 8, right: 8, left: -8, bottom: 0 }}
+        >
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={grid}
+            strokeOpacity={0.25}
+          />
           <XAxis
             dataKey="label"
             tick={{ fill: tick, fontSize: 12 }}
@@ -99,14 +110,18 @@ export function WeeklyChart({ stats, loading }: Props) {
               return date ? `${label} · ${date}` : String(label);
             }}
           />
-          <Legend wrapperStyle={{ paddingTop: 12, fontSize: 12, color: tick }} />
+          <Legend
+            wrapperStyle={{ paddingTop: 12, fontSize: 12, color: tick }}
+          />
           {stats.series.map((s, i) => (
             <Bar
               key={s.projectId}
               dataKey={s.projectName}
               stackId="week"
               fill={COLORS[i % COLORS.length]}
-              radius={i === stats.series.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]}
+              radius={
+                i === stats.series.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]
+              }
               maxBarSize={42}
             />
           ))}

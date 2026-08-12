@@ -15,4 +15,3 @@ data/
 serviceAccountKey.json
 firebase-service-account.json
 *-firebase-adminsdk-*.json
-backend/data/

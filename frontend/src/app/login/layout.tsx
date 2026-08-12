@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Log in",
-  description: "Log in to Time Management to manage your private project timers.",
+  description:
+    "Log in to Time Management to manage your private project timers.",
   robots: { index: true, follow: true },
 };
 

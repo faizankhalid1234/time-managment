@@ -12,9 +12,7 @@ type Props = {
 export function CountdownDisplay({ seconds, running, size = "lg" }: Props) {
   const { h, m, s } = formatCountdown(seconds);
   const digit =
-    size === "lg"
-      ? "text-4xl sm:text-5xl md:text-6xl"
-      : "text-2xl sm:text-3xl";
+    size === "lg" ? "text-4xl sm:text-5xl md:text-6xl" : "text-2xl sm:text-3xl";
 
   return (
     <div className="flex items-center justify-center gap-1.5 font-display tracking-tight tabular-nums sm:gap-2">

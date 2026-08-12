@@ -3,19 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  BarChart3,
-  FolderKanban,
-  History,
-  Plus,
-} from "lucide-react";
+import { BarChart3, FolderKanban, History, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import {
-  api,
-  type Project,
-  type Session,
-  type WeeklyStats,
-} from "@/lib/api";
+import { api, type Project, type Session, type WeeklyStats } from "@/lib/api";
 import { ProjectCard } from "@/components/ProjectCard";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { WeeklyChart } from "@/components/WeeklyChart";
@@ -145,7 +135,7 @@ export default function DashboardPage() {
 
   const totalTracked = projects.reduce(
     (sum, p) => sum + (p.liveSeconds || p.totalSeconds || 0),
-    0
+    0,
   );
   const activeCount = projects.filter((p) => p.status === "running").length;
 
@@ -164,9 +154,24 @@ export default function DashboardPage() {
         />
 
         <section className="mb-6 mt-6 grid gap-3 sm:grid-cols-3">
-          <Stat label="Your projects" value={String(projects.length)} hint="Private to you" accent="teal" />
-          <Stat label="Total tracked" value={formatCountdown(totalTracked).text} hint="All projects" accent="sky" />
-          <Stat label="Active now" value={String(activeCount)} hint="Running timers" accent="coral" />
+          <Stat
+            label="Your projects"
+            value={String(projects.length)}
+            hint="Private to you"
+            accent="teal"
+          />
+          <Stat
+            label="Total tracked"
+            value={formatCountdown(totalTracked).text}
+            hint="All projects"
+            accent="sky"
+          />
+          <Stat
+            label="Active now"
+            value={String(activeCount)}
+            hint="Running timers"
+            accent="coral"
+          />
         </section>
 
         <MenuBar
@@ -364,7 +369,9 @@ function EmptyProjects({ onCreate }: { onCreate: () => void }) {
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-accent">
         <Plus className="h-6 w-6" />
       </div>
-      <p className="font-display text-2xl text-main">Create your first project</p>
+      <p className="font-display text-2xl text-main">
+        Create your first project
+      </p>
       <p className="mt-2 max-w-sm text-sm text-muted">
         Add a project, press Start to begin the countdown, then End to save the
         session to your history.

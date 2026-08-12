@@ -20,12 +20,22 @@ export function formatPkNow(date = new Date()) {
   });
 
   const parts = Object.fromEntries(
-    fmt.formatToParts(date).map((p) => [p.type, p.value])
+    fmt.formatToParts(date).map((p) => [p.type, p.value]),
   );
 
   const monthNames = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   const monthIndex = Number(parts.month) - 1;
 

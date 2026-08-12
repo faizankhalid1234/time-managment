@@ -1,10 +1,4 @@
-/** Pakistan Standard Time helpers (Asia/Karachi, UTC+5) */
-
 const TZ = "Asia/Karachi";
-
-export function nowPk() {
-  return new Date();
-}
 
 export function toPkParts(date = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-PK", {
@@ -39,7 +33,7 @@ export function toPkParts(date = new Date()) {
   };
 }
 
-export function formatDuration(totalSeconds) {
+export function formatDuration(totalSeconds: number) {
   const s = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
@@ -54,39 +48,29 @@ export function formatDuration(totalSeconds) {
 }
 
 export function getWeekDateKeys(baseDate = new Date()) {
-  // Mon–Sun week in Pakistan time
   const parts = toPkParts(baseDate);
-  const [y, mo, d] = [Number(parts.year), Number(parts.month), Number(parts.day)];
-  // Create a date representing PK midnight for that calendar day via UTC offset approximation
-  // Use formatter weekday to find Monday
-  const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const weekdayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
   const weekdayIndex = weekdayNames.indexOf(parts.weekday);
   const daysFromMonday = weekdayIndex === 0 ? 6 : weekdayIndex - 1;
-
-  const keys = [];
-  for (let i = 0; i < 7; i++) {
-    const offset = i - daysFromMonday;
-    const dt = new Date(Date.UTC(y, mo - 1, d + offset, 5, 0, 0)); // rough PK noon anchor
-    // Better: iterate using local PK calendar via Intl
-    keys.push(null);
-  }
-
-  // Build week keys by walking calendar days in PK
-  const todayKey = parts.dateKey;
-  const today = parseDateKey(todayKey);
+  const today = parseDateKey(parts.dateKey);
   const monday = addDays(today, -daysFromMonday);
-  for (let i = 0; i < 7; i++) {
-    keys[i] = formatDateKey(addDays(monday, i));
-  }
-  return keys;
+  return Array.from({ length: 7 }, (_, i) => formatDateKey(addDays(monday, i)));
 }
 
-function parseDateKey(key) {
+function parseDateKey(key: string) {
   const [y, m, d] = key.split("-").map(Number);
   return { y, m, d };
 }
 
-function addDays({ y, m, d }, n) {
+function addDays({ y, m, d }: { y: number; m: number; d: number }, n: number) {
   const dt = new Date(Date.UTC(y, m - 1, d + n));
   return {
     y: dt.getUTCFullYear(),
@@ -95,7 +79,7 @@ function addDays({ y, m, d }, n) {
   };
 }
 
-function formatDateKey({ y, m, d }) {
+function formatDateKey({ y, m, d }: { y: number; m: number; d: number }) {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 

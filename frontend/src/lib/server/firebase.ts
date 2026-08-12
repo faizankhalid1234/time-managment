@@ -1,18 +1,19 @@
-import admin from "firebase-admin";
-import dotenv from "dotenv";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getDatabase, type Database } from "firebase-admin/database";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 
-dotenv.config();
+const localDbPath = path.join(process.cwd(), "data/local-db.json");
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const backendRoot = path.join(__dirname, "../..");
-const localDbPath = path.join(backendRoot, "data/local-db.json");
-
-let db = null;
+let db: Database | null = null;
 let useLocal = false;
-let localData = { users: {}, projects: {}, sessions: {} };
+let localData: Record<string, unknown> = {
+  users: {},
+  projects: {},
+  sessions: {},
+  emails: {},
+};
+let initialized = false;
 
 function ensureLocalFile() {
   const dir = path.dirname(localDbPath);
@@ -31,10 +32,10 @@ function saveLocal() {
 function resolveServiceAccountPath() {
   const fromEnv = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
   const candidates = [
-    fromEnv ? path.resolve(backendRoot, fromEnv) : null,
-    path.join(backendRoot, "serviceAccountKey.json"),
-    path.join(backendRoot, "firebase-service-account.json"),
-  ].filter(Boolean);
+    fromEnv ? path.resolve(process.cwd(), fromEnv) : null,
+    path.join(process.cwd(), "serviceAccountKey.json"),
+    path.join(process.cwd(), "firebase-service-account.json"),
+  ].filter(Boolean) as string[];
 
   return candidates.find((p) => fs.existsSync(p)) || null;
 }
@@ -71,6 +72,9 @@ function loadCredentials() {
 }
 
 export function initFirebase() {
+  if (initialized) return;
+  initialized = true;
+
   const databaseURL = (
     process.env.FIREBASE_DATABASE_URL ||
     "https://tracking-4e060-default-rtdb.firebaseio.com"
@@ -81,15 +85,15 @@ export function initFirebase() {
   if (!creds) {
     useLocal = true;
     ensureLocalFile();
-    console.log("⚠ Firebase service account missing.");
-    console.log("  Put serviceAccountKey.json in backend/ OR set FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY");
-    console.log("  Using local JSON fallback for now:", localDbPath);
+    console.log(
+      "⚠ Firebase service account missing — using local JSON database"
+    );
     return;
   }
 
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
+  if (!getApps().length) {
+    initializeApp({
+      credential: cert({
         projectId: creds.projectId || "tracking-4e060",
         clientEmail: creds.clientEmail,
         privateKey: creds.privateKey,
@@ -98,82 +102,75 @@ export function initFirebase() {
     });
   }
 
-  db = admin.database();
+  db = getDatabase();
   console.log("✓ Firebase Realtime Database connected:", databaseURL);
-  console.log("  Credentials from:", creds.source);
 }
 
-function ref(pathStr) {
-  return db.ref(pathStr);
-}
-
-export async function get(pathStr) {
-  if (useLocal) {
-    const parts = pathStr.split("/").filter(Boolean);
-    let cur = localData;
-    for (const p of parts) {
-      if (cur == null) return null;
-      cur = cur[p];
-    }
-    return cur ?? null;
+function walk(obj: Record<string, unknown>, parts: string[]) {
+  let cur: unknown = obj;
+  for (const p of parts) {
+    if (cur == null || typeof cur !== "object") return null;
+    cur = (cur as Record<string, unknown>)[p];
   }
-  const snap = await ref(pathStr).once("value");
+  return cur ?? null;
+}
+
+export async function dbGet(pathStr: string) {
+  initFirebase();
+  const parts = pathStr.split("/").filter(Boolean);
+  if (useLocal) return walk(localData, parts);
+
+  const snap = await db!.ref(pathStr).once("value");
   return snap.val();
 }
 
-export async function set(pathStr, value) {
+export async function dbSet(pathStr: string, value: unknown) {
+  initFirebase();
+  const parts = pathStr.split("/").filter(Boolean);
   if (useLocal) {
-    const parts = pathStr.split("/").filter(Boolean);
     let cur = localData;
     for (let i = 0; i < parts.length - 1; i++) {
-      if (!cur[parts[i]] || typeof cur[parts[i]] !== "object") cur[parts[i]] = {};
-      cur = cur[parts[i]];
+      const key = parts[i];
+      if (!cur[key] || typeof cur[key] !== "object") cur[key] = {};
+      cur = cur[key] as Record<string, unknown>;
     }
-    cur[parts[parts.length - 1]] = value;
+    cur[parts[parts.length - 1]] = value as never;
     saveLocal();
     return;
   }
-  await ref(pathStr).set(value);
+  await db!.ref(pathStr).set(value);
 }
 
-export async function update(pathStr, value) {
+export async function dbUpdate(pathStr: string, value: Record<string, unknown>) {
+  initFirebase();
+  const parts = pathStr.split("/").filter(Boolean);
   if (useLocal) {
-    const parts = pathStr.split("/").filter(Boolean);
     let cur = localData;
     for (let i = 0; i < parts.length - 1; i++) {
-      if (!cur[parts[i]] || typeof cur[parts[i]] !== "object") cur[parts[i]] = {};
-      cur = cur[parts[i]];
+      const key = parts[i];
+      if (!cur[key] || typeof cur[key] !== "object") cur[key] = {};
+      cur = cur[key] as Record<string, unknown>;
     }
     const key = parts[parts.length - 1];
-    cur[key] = { ...(cur[key] || {}), ...value };
+    cur[key] = { ...((cur[key] as object) || {}), ...value };
     saveLocal();
     return;
   }
-  await ref(pathStr).update(value);
+  await db!.ref(pathStr).update(value);
 }
 
-export async function remove(pathStr) {
+export async function dbRemove(pathStr: string) {
+  initFirebase();
+  const parts = pathStr.split("/").filter(Boolean);
   if (useLocal) {
-    const parts = pathStr.split("/").filter(Boolean);
     let cur = localData;
     for (let i = 0; i < parts.length - 1; i++) {
       if (!cur[parts[i]]) return;
-      cur = cur[parts[i]];
+      cur = cur[parts[i]] as Record<string, unknown>;
     }
     delete cur[parts[parts.length - 1]];
     saveLocal();
     return;
   }
-  await ref(pathStr).remove();
-}
-
-export async function push(pathStr, value) {
-  if (useLocal) {
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    await set(`${pathStr}/${id}`, value);
-    return id;
-  }
-  const newRef = ref(pathStr).push();
-  await newRef.set(value);
-  return newRef.key;
+  await db!.ref(pathStr).remove();
 }

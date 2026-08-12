@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export type User = { id: string; name: string; email: string };
 
@@ -87,10 +87,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -105,7 +102,7 @@ async function request<T>(
     throw new ApiError(
       data.error || "Something went wrong",
       data.code || "ERROR",
-      res.status
+      res.status,
     );
   }
   return data as T;
@@ -126,8 +123,7 @@ export const api = {
 
   me: () => request<{ user: User }>("/auth/me"),
 
-  projects: () =>
-    request<{ projects: Project[]; nowPk: NowPk }>("/projects"),
+  projects: () => request<{ projects: Project[]; nowPk: NowPk }>("/projects"),
 
   createProject: (body: { name: string; description?: string }) =>
     request<{ project: Project }>("/projects", {
@@ -143,14 +139,16 @@ export const api = {
   stop: (id: string) =>
     request<{ project: Project; session: Session; nowPk: NowPk }>(
       `/projects/${id}/stop`,
-      { method: "POST" }
+      { method: "POST" },
     ),
 
   remove: (id: string) =>
     request<{ ok: boolean }>(`/projects/${id}`, { method: "DELETE" }),
 
   history: () =>
-    request<{ sessions: Session[]; nowPk: NowPk }>("/projects/history/sessions"),
+    request<{ sessions: Session[]; nowPk: NowPk }>(
+      "/projects/history/sessions",
+    ),
 
   weekly: () => request<WeeklyStats>("/projects/stats/weekly"),
 };

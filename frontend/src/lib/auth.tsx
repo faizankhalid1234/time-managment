@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("luma_user", JSON.stringify(res.user));
       setUser(res.user);
     },
-    []
+    [],
   );
 
   const logout = useCallback(() => {
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({ user, loading, login, signup, logout }),
-    [user, loading, login, signup, logout]
+    [user, loading, login, signup, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
