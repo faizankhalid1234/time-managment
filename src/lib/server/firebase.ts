@@ -98,7 +98,20 @@ function loadCredentials() {
   }
 
   const email = stripQuotes(process.env.FIREBASE_CLIENT_EMAIL || "");
-  const key = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY || "");
+  let key = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY || "");
+
+  // Vercel-friendly: paste base64 of the private_key field
+  const keyB64 = stripQuotes(process.env.FIREBASE_PRIVATE_KEY_BASE64 || "");
+  if ((!key || key.includes("PASTE_FROM_FIREBASE")) && keyB64) {
+    try {
+      key = normalizePrivateKey(
+        Buffer.from(keyB64, "base64").toString("utf8")
+      );
+    } catch {
+      throw new Error("FIREBASE_PRIVATE_KEY_BASE64 is invalid");
+    }
+  }
+
   if (
     email &&
     key &&
